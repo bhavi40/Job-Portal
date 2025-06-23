@@ -1,12 +1,12 @@
-import { use } from "react";
 import { User } from "../models/user.model.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
+
 export const register=async(req,res)=>{
     try{
-       const {fullname, email, phonenumber, password, role}=req.body;
-       if (!fullname || !email || !phonenumber || !password || !role)
+       const {fullname, email, phoneNumber, password, role}=req.body;
+       if (!fullname || !email || !phoneNumber || !password || !role)
         {
             return res.status(400).json({
                 message:"Something is missing",
@@ -27,7 +27,7 @@ export const register=async(req,res)=>{
        await User.create({
         fullname,
         email,
-        phonenumber,
+        phoneNumber,
         password:hashedPassword,
         role
        });
@@ -42,10 +42,11 @@ export const register=async(req,res)=>{
     }
 }
 
+//login function
 export const login= async(req,res)=>{
     try{
-        const {email,Password,role}=req.body;
-        if (!email || !Password ||!role){
+        const {email, password, role}=req.body;
+        if (!email || !password ||!role){
             return res.status(400).json({
                 message:'Something is missing.',
                 success:false
@@ -84,12 +85,12 @@ export const login= async(req,res)=>{
             _id:user._id,
             fullname:user.fullname,
             email:user.email,
-            phoneNumber:user.phonenumber,
+            phoneNumber:user.phoneNumber,
             role:user.role,
-            profile:user.role
+            profile:user.profile
         }
         //token is stored in cookies
-        return res.status(200).cookie("token",{maxage:1*24*60*60*1000, httpsOnly:true, sameSite:'strict'}).json({
+        return res.status(200).cookie("token",token, {maxAge:1*24*60*60*1000, httpsOnly:true, sameSite:'strict'}).json({
             message:`Welcome back ${user.fullname}`,
             user,
             success:true
@@ -104,7 +105,7 @@ export const login= async(req,res)=>{
 export const logout=async(req,res)=>{
     try{
         //emptying the token
-        return res.status(200).cookie("token","",{maxage:0}).json({
+        return res.status(200).cookie("token"," ",{maxAge:0}).json({
             message:"Logged Out Successfully",
             success:true
         })
@@ -113,35 +114,53 @@ export const logout=async(req,res)=>{
     }
 }
 
+//if user edits anything in fronend this will help you to handle that logic
 export const updateProfile=async (req,res)=>{
     try{
-        const {fullname,email,phonenumber,bio,skills}=req.body;
-        if (!fullname || !email || !phonenumber || !bio || !skills)
-        {
-            return res.status(400).json({
-                message:"Something is missing",
-                success:false
-            });
-       };
+        const {fullname,email,phoneNumber,bio,skills}=req.body;
+        const file=req.file;
+
+       //cloudinary code will be here for resume
 
        //skills will be in string format, we have to convert it into array
-       const skillsArray=skills.split(",");
+       let skillsArray;
+       if(skills){
+          skillsArray=skills.split(",");
+       }
        //for updating as well we need to authenticate
        const userId=req.id; //middleware authentication
-       let user=await user.findByID(UserID);
+
+       let user=await User.findByIdAndUpdate(userId);
        if(!user){
         return res.status(400).json({
             message:'User not found.',
             success:false
         })
        }
+        if(fullname) user.fullname=fullname
+        if(email) user.email=email
+        if(phoneNumber) user.phoneNumber=phoneNumber
+        if(bio) user.profile.bio=bio
+        if(skills) user.profile.skills=skillsArray
 
-        user.fullname=fullname,
-        user.email=email,
-        user.phoneNumber=phonenumber,
-        user.profile.bio=bio,
-        user.profile.skills=skillsArray
+        //resume code later
 
+        await user.save();
+
+        user={
+            _id:user._id,
+            fullname:user.fullname,
+            email:user.email,
+            phoneNumber:user.phoneNumber,
+            role:user.role,
+            profile:user.profile
+        }
+
+        return res.status(200).json({
+            message:"Profile Updated Succesfully.",
+            user,
+            success:true
+        });
 
     }catch(error){
         console.log(error);
