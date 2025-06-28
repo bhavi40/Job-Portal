@@ -1,4 +1,6 @@
 import { Job } from "../models/job.model.js"; 
+
+
 //this controller is admins for posting jobs
 export const postJob=async (req,res)=>{
     try{
@@ -42,12 +44,15 @@ export const getAllJobs=async (req,res)=>{
         const query={
             $or:[
                 {title:{$regex:keyword, $options:"i"}},
+                {requirements:{$regex:keyword, $options:"i"}},
                 {description:{$regex:keyword, $options:"i"}},
 
             ]
         };
         //Based on query it will find you job in the job model.
-        const jobs=await Job.find(query);
+        const jobs=await Job.find(query).populate({
+            path: "company"
+        }).sort({createdAt:-1});
         if(!jobs){
             return res.status(400).json({
                 message:"Jobs not found",
@@ -88,7 +93,7 @@ export const getJobById=async(req,res)=>{
 }
 
 //How many jobs created by the admin
-export const getAdminJobs=async (res,req)=>{
+export const getAdminJobs=async (req,res)=>{
     try{
         const adminId=req.id;
         const jobs= await Job.find({created_by:adminId});
